@@ -1,5 +1,7 @@
 import os
 import cx_Oracle
+from tabulate import tabulate
+
 dsn_tns = cx_Oracle.makedsn("localhost", 1521, "XE")
 connection = cx_Oracle.connect("SYS", "root", dsn_tns, mode=cx_Oracle.SYSDBA)
 
@@ -38,24 +40,26 @@ def crear_tablespace_temporal():
         print("Error al crear el tablespace temporal:", error.message)
     cursor.close()
 
-def visualizar_tamaño_tablespace():#MEJORAR
-    nombre_tablespace = input("Ingrese el nombre del tablespace que desea consultar: ")
+def visualizar_tamaño_tablespace():
     cursor = connection.cursor()
     try:
-        cursor.execute(f"SELECT * FROM DBA_TABLESPACES WHERE tablespace_name = '{nombre_tablespace}'")
-        for row in cursor:
-            print(row)
+        cursor.execute("SELECT tablespace_name, round((bytes / 1024 / 1024), 2) as size_mb FROM dba_data_files")
+        headers = ["Tablespace_name", "Size_MB"]
+        data = [[row[0], row[1]] for row in cursor]
+        print(tabulate(data, headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar el tamaño del tablespace:", error.message)
     cursor.close()
 
-def modificar_tamaño_tablespace():#MEJORAR
+def modificar_tamaño_tablespace():
     nombre_tablespace = input("Ingrese el nombre del tablespace que desea modificar: ")
-    tamaño_tablespace = input("Ingrese el tamaño que desea(por ejemplo:100M): ")
+    ruta_carpeta = input("Ingrese la ruta de la carpeta donde se encuentra el archivo: ")
+    tamaño_nuevo = input("Ingrese el nuevo tamaño para el tablespace (por ejemplo, 100M): ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"ALTER TABLESPACE {nombre_tablespace} RESIZE {tamaño_tablespace}")
+        ruta_completa = f"{ruta_carpeta}\\{nombre_tablespace}.dbf"
+        cursor.execute(f"ALTER DATABASE DATAFILE '{ruta_completa}' RESIZE {tamaño_nuevo}")
         print(f"El tablespace {nombre_tablespace} ha sido modificado exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
@@ -92,14 +96,35 @@ def eliminar_tablespace():
 def crear_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
     password_usuario = input("Ingrese la contraseña del usuario: ")
+    tablespace_usuario = input("Ingrese el nombre del tablespace para el usuario: ")
+    tablespace_temporal = input("Ingrese el nombre del tablespace temporal para el usuario: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"CREATE USER {nombre_usuario} IDENTIFIED BY {password_usuario}")
-        print(f"El usuario {nombre_usuario} ha sido creado exitosamente.")
+        cursor.execute(
+            f"CREATE USER {nombre_usuario} IDENTIFIED BY {password_usuario} DEFAULT TABLESPACE {tablespace_usuario} TEMPORARY TABLESPACE {tablespace_temporal} QUOTA UNLIMITED ON {tablespace_usuario} QUOTA UNLIMITED ON {tablespace_temporal}"
+        )
+        cursor.execute(f"GRANT CREATE SESSION TO {nombre_usuario}")
+        cursor.execute(f"GRANT ALL PRIVILEGES TO {nombre_usuario}")
+        print(f"Se ha creado el usuario {nombre_usuario} correctamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el usuario:", error.message)
     cursor.close()
+
+
+
+def eliminar_usuario():
+    nombre_usuario = input("Ingrese el nombre del usuario: ")
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"DROP USER {nombre_usuario} CASCADE")
+        print(f"El usuario {nombre_usuario} ha sido eliminado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al eliminar el usuario:", error.message)
+    cursor.close()
+
+
 
 def crear_rol():
     nombre_rol = input("Ingrese el nombre del rol: ")
