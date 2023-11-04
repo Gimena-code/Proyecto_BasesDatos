@@ -346,6 +346,130 @@ def eliminar_datos():
     cursor.close()
                         
 
+#PERFORMANCE BASE DE DATOS
+def Vista_estadoBD():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM V$INSTANCE")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar estado de la base de datos:", error.message)
+    cursor.close()
+
+def Parametros_Generales():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error a la consulta de parametros generales:", error.message)
+    cursor.close()
+
+def Know_Version():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'compatible'")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar version:", error.message)
+    cursor.close()
+
+def Name_Spfile():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"select value from v$system_parameter where name = 'spfile'")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar ubicacion y nombre del spfile:", error.message)
+    cursor.close()
+
+def Name_ControlFiles():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'control_files'")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar ubicacion y nombre de los ficheros de control:", error.message)
+    cursor.close()
+
+def Name_DB():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'db_name'")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar nombre de la base de datos:", error.message)
+    cursor.close()
+
+def Actual_Cx():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT OSUSER, USERNAME, MACHINE, PROGRAM FROM V$SESSION ORDER BY OSUSER")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar las conexiones actuales:", error.message)
+    cursor.close()
+
+def Objects():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT OWNER, COUNT(OWNER) Numero FROM DBA_OBJECTS GROUP BY OWNER")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar los propietarios por objetos y numero de objetos:", error.message)
+    cursor.close()
+
+def Tables_ActualUser():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM USER_TABLES")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar las tablas del usuario actual:", error.message)
+    cursor.close()
+
+def User_Products():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM USER_CATALOG")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar los productos del usuario:", error.message)
+    cursor.close()
+
+
+def Usser_Cx():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT USERNAME USUARIO_ORACLE, COUNT(USERNAME) NUMERO_SESIONES FROM V$SESSION GROUP BY USERNAME ORDER BY NUMERO_SESIONES DESC")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar los usuarios conectados:", error.message)
+    cursor.close()
+
+
 #MENUS
 def mostrar_menu_principal():
     print("1) ADMINISTRACION DE TABLESPACES\n")
@@ -576,30 +700,40 @@ def mostrar_menu():
                 mostrar_menu_performance_bd()
                 opcion_performance = input("Seleccione una opción: ")
                 if opcion_performance == "1":
-                    print("Función para Vista que muestra el estado de la base de datos")
+                    print("Vista del estado de la base de datos")
+                    Vista_estadoBD()
                 elif opcion_performance == "2":
-                    print("Consulta de parámetros generales")
+                    print("Consulta Parametros generales")
+                    Parametros_Generales()
                 elif opcion_performance == "3":
-                    print("Consulta para conocer la versión")
+                    print("Consulta la version")
+                    Know_Version()
                 elif opcion_performance == "4":
-                    print("Consulta ubicación y nombre de SPFILE")
+                    print("Consulta de ubicacion y nombre de spfile")
+                    Name_Spfile()
                 elif opcion_performance == "5":
-                    print("Consulta ubicación y número de ficheros de control")
+                    print("Consulta ubicacion y numero de ficheros de control")
+                    Name_ControlFiles()
                 elif opcion_performance == "6":
                     print("Consulta el nombre de la base de datos")
+                    Name_DB()
                 elif opcion_performance == "7":
                     print("Consulta de las conexiones actuales")
+                    Actual_Cx()
                 elif opcion_performance == "8":
                     print("Consulta de usuarios conectados y número de sesiones")
+                    Usser_Cx()
                 elif opcion_performance == "9":
                     print("Propietarios por objetos y número de objetos")
+                    Objects()
                 elif opcion_performance == "10":
                     print("Consulta las tablas propiedad del usuario actual")
+                    Tables_ActualUser()
                 elif opcion_performance == "11":
                     print("Consulta todos los productos del usuario")
+                    User_Products()
                 elif opcion_performance == "0":
                     break
-
         elif opcion == "4":
             while True:
                 input("Presione Enter para continuar...")
