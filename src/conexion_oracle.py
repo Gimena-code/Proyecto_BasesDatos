@@ -12,7 +12,7 @@ def limpiar_pantalla():
     else:
         _ = os.system('clear')
 
-#FUNCIONES TABLESPACES
+#FUNCIONES TABLESPACES --LISTO
 def crear_tablespace():
     nombre_tablespace = input("Ingrese el nombre del tablespace: ")
     carpeta_guardado = input("Ingrese la ruta de la carpeta donde desea guardar el archivo: ")
@@ -95,7 +95,7 @@ def eliminar_tablespace():
         print("Error al eliminar el tablespace:", error.message)
     cursor.close()
 
-#FUNCIONES USUARIOS
+#FUNCIONES USUARIOS --LISTO
 def crear_usuario():
     try:
         # Solicita al usuario que ingrese el nombre del usuario a crear
@@ -237,7 +237,7 @@ def visualizar_privilegios_usuario():
         print("Error al visualizar los privilegios del usuario:", error)
     cursor.close()
 
-#FUNCIONES ROLES
+#FUNCIONES ROLES --LISTO
 def crear_rol():
     try:
         # Solicita al usuario que ingrese el nombre del rol a crear
@@ -376,7 +376,7 @@ def visualizar_privilegios_rol():
         print("Error al visualizar los privilegios del rol:", error)
     cursor.close()
 
-#FUNCIONES TABLAS
+#FUNCIONES TABLAS --LISTO
 def crear_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
@@ -467,7 +467,7 @@ def eliminar_datos():
     connection.commit()
     cursor.close()
 
-#FUNCIONES INDICES
+#FUNCIONES INDICES --LISTO
 def crear_indice():
     nombre_indice = input("Ingrese el nombre del índice: ")
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
@@ -509,16 +509,15 @@ def monitorear_indices():
     connection.commit()
     cursor.close()
 
-#PLAN EJECUCION
+#PLAN EJECUCION --LISTO
 def plan_ejecucion():
     consulta_sql = input("Ingrese la consulta SQL para la cual desea generar el plan de ejecución: ")
     cursor = connection.cursor()
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"EXPLAIN PLAN FOR {consulta_sql}")
-        cursor.execute("SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)")
-        for row in cursor:
-            print(row)
+        print("Plan de ejecución generado correctamente.")
+       
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al generar el plan de ejecución:", error)
@@ -527,6 +526,7 @@ def plan_ejecucion():
 
 def visualizar_plan_ejecucion():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute("SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)")
         for row in cursor:
@@ -534,45 +534,59 @@ def visualizar_plan_ejecucion():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar los planes de ejecución:", error.message)
+    connection.commit()
     cursor.close()
 
+def eliminar_planes_ejecucion():
+    cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute("DELETE PLAN_TABLE")
+        print("Se han eliminado todos los planes de ejecución correctamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al eliminar los planes de ejecución:", error.message)
+    connection.commit()
+    cursor.close()
 
-#FUNCIONES ESTADISTICAS
-def estadisticas_esquemas():
+#FUNCIONES ESTADISTICAS --LISTO
+def recopilar_estadisticas_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"SELECT * FROM USER_INDEXES")
+        cursor.execute(f"BEGIN DBMS_STATS.GATHER_TABLE_STATS(ownname => USER, tabname => '{nombre_tabla}'); END;")
+        print(f"Se han recopilado las estadísticas para la tabla {nombre_tabla} correctamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al recopilar estadísticas para la tabla:", error.message)
+    connection.commit()
+    cursor.close()
+
+def ver_estadisticas_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT table_name, num_rows, last_analyzed FROM USER_TABLES WHERE TABLE_NAME = '{nombre_tabla}'")
         for row in cursor:
             print(row)
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al monitorear los índices:", error.message)
+        print("Error al ver las estadísticas de la tabla:", error.message)
     cursor.close()
 
-def estadisticas_tablas():
+def eliminar_estadisticas_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"SELECT * FROM USER_INDEXES")
-        for row in cursor:
-            print(row)
+        cursor.execute(f"BEGIN DBMS_STATS.DELETE_TABLE_STATS(ownname => USER, tabname => '{nombre_tabla}'); END;")
+        print(f"Se han eliminado las estadísticas para la tabla {nombre_tabla} correctamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al monitorear los índices:", error.message)
+        print("Error al eliminar estadísticas para la tabla:", error.message)
+    connection.commit()
     cursor.close()
 
-def estadisticas_columnas():
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"SELECT * FROM USER_INDEXES")
-        for row in cursor:
-            print(row)
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al monitorear los índices:", error.message)
-    cursor.close()
-
-
-#FUNCIONES PERFORMANCE BASE DE DATOS
+#FUNCIONES PERFORMANCE BASE DE DATOS --FALTA TABULAR LOS RESULTADOS DE CONSULTAS
 def Vista_estadoBD():
     cursor = connection.cursor()
     try:
@@ -694,39 +708,119 @@ def Usser_Cx():
         print("Error al mostrar los usuarios conectados:", error.message)
     cursor.close()
 
+#FUNCIONES AUDITORIA --FALTA
 
-#FUNCIONES AUDITORIA
-
-def Desactivar_Auditoria():
+#FUNCIONES RESPALDOS CON EXPDP e IMPDP --FALTA PROBAR
+def crear_directorio():
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    ruta_carpeta = input("Ingrese la ruta de la carpeta donde desea guardar el directorio: ")
+    ruta_completa = f"{ruta_carpeta}\\{nombre_directorio}"
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"ALTER SYSTEM SET AUDIT_TRAIL=DB SCOPE=SPFILE")
-        cursor.execute(f"ALTER SYSTEM SET AUDIT_SYS_OPERATIONS=FALSE SCOPE=SPFILE")
-        cursor.execute(f"ALTER SYSTEM SET AUDIT_SYSLOG_LEVEL=LOCAL1.WARNING SCOPE=SPFILE")
-        print("Auditoria desactivada correctamente")
+        cursor.execute(f"CREATE DIRECTORY {nombre_directorio} AS '{ruta_completa}'")
+        cursor.execute(f"GRANT READ, WRITE ON DIRECTORY {nombre_directorio} TO SYSTEM")
+        print(f"El directorio {nombre_directorio} ha sido creado exitosamente en la ruta {ruta_completa}.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al desactivar la auditoria:", error.message)
-    cursor.close()
+        print("Error al crear el directorio:", error.message)
+    connection.commit()
+    cursor.close() 
 
-def Visualizar_Tablas_Auditoria():
+def crear_respaldo_full():
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"SELECT * FROM USER_AUDIT_OBJECT")
-        for row in cursor:
-            print(row)
+        cursor.execute(f"expdp system/root@localhost:1521/XE full=y directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al mostrar las tablas de auditoria:", error.message)
+        print("Error al crear el respaldo:", error.message)
+    connection.commit()
     cursor.close()
 
-#FUNCIONES RESPALDOS
+def recuperar_respaldo_full():
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"impdp system/root@localhost:1521/XE full=y directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al recuperar el respaldo:", error.message)
+    connection.commit()
+    cursor.close()
+
+def respaldo_esquema():
+    nombre_esquema = input("Ingrese el nombre del esquema: ")
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"expdp system/root@localhost:1521/XE schemas={nombre_esquema} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al crear el respaldo:", error.message)
+    connection.commit()
+    cursor.close()
+
+def recuperar_respaldo_esquema():
+    nombre_esquema = input("Ingrese el nombre del esquema: ")
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"impdp system/root@localhost:1521/XE schemas={nombre_esquema} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al recuperar el respaldo:", error.message)
+    connection.commit()
+    cursor.close()
+
+def respaldo_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"expdp system/root@localhost:1521/XE tables={nombre_tabla} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al crear el respaldo:", error.message)
+    connection.commit()
+    cursor.close()
+
+def recuperar_respaldo_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
+    nombre_directorio = input("Ingrese el nombre del directorio: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"impdp system/root@localhost:1521/XE tables={nombre_tabla} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al recuperar el respaldo:", error.message)
+    connection.commit()
+    cursor.close()
+
 
 
 
 #MENUS
 def mostrar_menu_principal():
-    print("1) ADMINISTRACION DE TABLESPACES\n")
+    print("1) ADMINISTRACION DE TABLESPACES Y SEGURIDAD\n")
     print("2) TUNNING DE CONSULTAS\n")
     print("3) PERFORMANCE DE LA BASE DE DATOS\n")
     print("4) AUDITORIA DE LA BD\n")
@@ -789,12 +883,13 @@ def mostrar_menu_indices():
 def mostrar_menu_ejecucion():
     print("1) Crear un plan de ejecución\n")
     print("2) Visualizar los planes de ejecución generados\n")
-    print("3) Eliminar plan de ejecución\n")
+    print("3) Eliminar todos los planes de ejecución\n")
     print("0) Volver\n")
 
 def mostrar_menu_estadisticas():
-    print("1) Esquemas\n")
-    print("2) Tablas\n")
+    print("1) Recopilar estadisticas de una tabla\n")
+    print("2) Ver estadisticas\n")
+    print("3) Eliminar estadisticas\n")
     print("0) Volver\n")
 
 def mostrar_menu_performance_bd():
@@ -818,9 +913,15 @@ def mostrar_menu_auditoria():
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_respaldos():
-    print("1) CREACIÓN DE RESPALDOS\n")
-    print("2) RECUPERACIÓN DE RESPALDOS\n")
+    print("1) CREAR DIRECTORIO\n")
+    print("2) CREAR RESPALDO FULL\n")
+    print("3) RECUPERAR RESPALDO FULL\n")
+    print("4) CREAR RESPALDO DE UN ESQUEMA\n")
+    print("5) RECUPERAR RESPALDO DE UN ESQUEMA\n")
+    print("6) CREAR RESPALDO DE UNA TABLA\n")
+    print("7) RECUPERAR RESPALDO DE UNA TABLA\n")
     print("0) Volver al menú principal\n")
+    
 
 def mostrar_menu():
     while True:
@@ -947,7 +1048,7 @@ def mostrar_menu():
                         elif opcion_ejecucion == "2":
                             visualizar_plan_ejecucion()
                         elif opcion_ejecucion == "3":
-                            print("Función para eliminar plan de ejecución")
+                            eliminar_planes_ejecucion()
                         elif opcion_ejecucion == "0":
                             break
                 elif opcion_tunning == "3":#Estadisticas
@@ -957,9 +1058,11 @@ def mostrar_menu():
                         mostrar_menu_estadisticas()
                         opcion_estadisticas = input("Seleccione una opción: ")
                         if opcion_estadisticas == "1":
-                            print("Función para Esquemas")
+                            recopilar_estadisticas_tabla()
                         elif opcion_estadisticas == "2":
-                            print("Función para Tablas")
+                            ver_estadisticas_tabla()
+                        elif opcion_estadisticas == "3":
+                            eliminar_estadisticas_tabla()
                         elif opcion_estadisticas == "0":
                             break
                 elif opcion_tunning == "0":
@@ -1028,9 +1131,19 @@ def mostrar_menu():
                 mostrar_menu_respaldos()
                 opcion_respaldos = input("Seleccione una opción: ")
                 if opcion_respaldos == "1":
-                    print("CREACIÓN DE RESPALDOS")
+                    crear_directorio()
                 elif opcion_respaldos == "2":
-                    print("RECUPERACIÓN DE RESPALDOS")
+                    crear_respaldo_full()
+                elif opcion_respaldos == "3":
+                    recuperar_respaldo_full()
+                elif opcion_respaldos == "4":
+                    respaldo_esquema()
+                elif opcion_respaldos == "5":
+                    recuperar_respaldo_esquema()
+                elif opcion_respaldos == "6":
+                    respaldo_tabla()
+                elif opcion_respaldos == "7":
+                    recuperar_respaldo_tabla()
                 elif opcion_respaldos == "0":
                     break
 
