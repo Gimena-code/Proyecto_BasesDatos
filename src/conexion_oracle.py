@@ -5,6 +5,7 @@ from tabulate import tabulate
 dsn_tns = cx_Oracle.makedsn("localhost", 1521, "XE")
 connection = cx_Oracle.connect("SYS", "root", dsn_tns, mode=cx_Oracle.SYSDBA)
 
+
 def limpiar_pantalla():
     if os.name == 'nt':
         _ = os.system('cls')
@@ -18,6 +19,7 @@ def crear_tablespace():
     nombre_archivo = f"{nombre_tablespace}.dbf"
     ruta_archivo_datos = f"{carpeta_guardado}\\{nombre_archivo}"
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE TABLESPACE {nombre_tablespace} DATAFILE '{ruta_archivo_datos}' SIZE 10M REUSE AUTOEXTEND ON NEXT 10M MAXSIZE 200M")
         print(f"El tablespace {nombre_tablespace} ha sido creado exitosamente en la ruta {ruta_archivo_datos}.")
@@ -32,6 +34,7 @@ def crear_tablespace_temporal():
     nombre_archivo = f"{nombre_tablespace_temporal}.dbf"
     ruta_archivo_datos = f"{carpeta_guardado}\\{nombre_archivo}"
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE TEMPORARY TABLESPACE {nombre_tablespace_temporal} TEMPFILE '{ruta_archivo_datos}' SIZE 5M REUSE AUTOEXTEND ON NEXT 5M MAXSIZE 100M")
         print(f"El tablespace temporal {nombre_tablespace_temporal} ha sido creado exitosamente en la ruta {ruta_archivo_datos}.")
@@ -92,143 +95,376 @@ def eliminar_tablespace():
         print("Error al eliminar el tablespace:", error.message)
     cursor.close()
 
-#FUNCIONES USUARIOS Y ROLES
+#FUNCIONES USUARIOS
 def crear_usuario():
-    nombre_usuario = input("Ingrese el nombre del usuario: ")
-    password_usuario = input("Ingrese la contraseña del usuario: ")
-    tablespace_usuario = input("Ingrese el nombre del tablespace para el usuario: ")
-    tablespace_temporal = input("Ingrese el nombre del tablespace temporal para el usuario: ")
-    cursor = connection.cursor()
     try:
-        cursor.execute(
-            f"CREATE USER {nombre_usuario} IDENTIFIED BY {password_usuario} DEFAULT TABLESPACE {tablespace_usuario} TEMPORARY TABLESPACE {tablespace_temporal} QUOTA UNLIMITED ON {tablespace_usuario} QUOTA UNLIMITED ON {tablespace_temporal}"
-        )
-        cursor.execute(f"GRANT CREATE SESSION TO {nombre_usuario}")
-        cursor.execute(f"GRANT ALL PRIVILEGES TO {nombre_usuario}")
-        print(f"Se ha creado el usuario {nombre_usuario} correctamente.")
+        # Solicita al usuario que ingrese el nombre del usuario a crear
+        usuario = input("Ingrese el nombre del nuevo usuario: ")
+        contraseña = input("Ingrese la contraseña del nuevo usuario: ")
+
+
+        # Crea un cursor para ejecutar las consultas SQL
+        cursor = connection.cursor()
+
+        # Ejecuta el comando "alter session" para habilitar "_ORACLE_SCRIPT"
+        cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+
+        # Crea el usuario con el nombre proporcionado y la contraseña ingresada
+        cursor.execute(f"CREATE USER {usuario} IDENTIFIED BY {contraseña}")
+
+        # Realiza un commit para aplicar los cambios en la base de datos
+        connection.commit()
+
+        # Cierra el cursor y la conexión
+        cursor.close()
+       
+
+        print(f"Se ha creado el usuario {usuario} correctamente.")
+
+        return True
+
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al crear el usuario:", error.message)
-    cursor.close()
+        print("Error de Oracle:", error.message)
+        return False
 
-
-
-def eliminar_usuario():
+def borrar_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP USER {nombre_usuario} CASCADE")
         print(f"El usuario {nombre_usuario} ha sido eliminado exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el usuario:", error.message)
-    cursor.close()
-
-
-
-def crear_rol():
-    nombre_rol = input("Ingrese el nombre del rol: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"CREATE ROLE {nombre_rol}")
-        print(f"El rol {nombre_rol} ha sido creado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear el rol:", error.message)
-    cursor.close()
-
-def borrar_usuario():
-    nombre_usuario = input("Ingrese el nombre del usuario: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"DROP USER {nombre_usuario} CASCADE")
-        print(f"El usuario {nombre_usuario} ha sido borrado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al borrar el usuario:", error.message)
-    cursor.close()
-
-def borrar_rol():
-    nombre_rol = input("Ingrese el nombre del rol: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"DROP ROLE {nombre_rol}")
-        print(f"El rol {nombre_rol} ha sido borrado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al borrar el rol:", error.message)
+    connection.commit()
     cursor.close()
 
 def asignar_privilegio_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
-    nombre_privilegio = input("Ingrese el nombre del privilegio: ")
+
+    lista_privilegios = [
+        "CREATE SESSION",
+        "SELECT ANY TABLE",
+        "INSERT ANY TABLE",
+        "UPDATE ANY TABLE",
+        "DELETE ANY TABLE",
+        "ALTER ANY TABLE",
+        "DROP ANY TABLE",
+        "CREATE ANY TABLE",
+        "CREATE ANY INDEX",
+        "CREATE ANY VIEW",
+        "CREATE ANY PROCEDURE",
+        "DROP USER",
+        "GRANT ANY PRIVILEGE"
+        # Agrega aquí más privilegios según sea necesario
+    ]
+
+    privilegios = []
+
+    while True:
+        print("Lista de privilegios disponibles:")
+        for i, privilegio in enumerate(lista_privilegios, 1):
+            print(f"{i}. {privilegio}")
+
+        opcion_privilegio = input("Ingrese el número correspondiente al privilegio que desea asignar o presione Enter para salir: ")
+
+        if opcion_privilegio.isdigit() and 1 <= int(opcion_privilegio) <= len(lista_privilegios):
+            privilegio_elegido = lista_privilegios[int(opcion_privilegio) - 1]
+            privilegios.append(privilegio_elegido)
+
+            respuesta = input("¿Desea agregar otro privilegio? (S/N): ")
+            if respuesta.upper() != "S":
+                break
+        elif opcion_privilegio == "":
+            break
+        else:
+            print("Opción no válida. Por favor, ingrese el número correspondiente al privilegio.")
+
     cursor = connection.cursor()
+
     try:
-        cursor.execute(f"GRANT {nombre_privilegio} TO {nombre_usuario}")
-        print(f"El privilegio {nombre_privilegio} ha sido asignado al usuario {nombre_usuario} exitosamente.")
+        for privilegio in privilegios:
+            cursor.execute(f"GRANT {privilegio} TO {nombre_usuario}")
+            print(f"El privilegio {privilegio} ha sido asignado al usuario {nombre_usuario} exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al asignar el privilegio al usuario:", error.message)
-    cursor.close()
-
-def asignar_privilegio_rol():
-    nombre_rol = input("Ingrese el nombre del rol: ")
-    nombre_privilegio = input("Ingrese el nombre del privilegio: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"GRANT {nombre_privilegio} TO {nombre_rol}")
-        print(f"El privilegio {nombre_privilegio} ha sido asignado al rol {nombre_rol} exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al asignar el privilegio al rol:", error.message)
+    connection.commit()
     cursor.close()
 
 def revocar_privilegio_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
-    nombre_privilegio = input("Ingrese el nombre del privilegio: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_usuario}")
-        print(f"El privilegio {nombre_privilegio} ha sido revocado del usuario {nombre_usuario} exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al revocar el privilegio al usuario:", error.message)
-    cursor.close()
+        cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_usuario}'")
+        rows = cursor.fetchall()
+        if rows:
+            print(f"Los privilegios del usuario {nombre_usuario} son:")
+            for i, row in enumerate(rows, 1):
+                print(f"{i}. {row[0]}")
 
-def revocar_privilegio_rol():
-    nombre_rol = input("Ingrese el nombre del rol: ")
-    nombre_privilegio = input("Ingrese el nombre del privilegio: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_rol}")
-        print(f"El privilegio {nombre_privilegio} ha sido revocado del rol {nombre_rol} exitosamente.")
+            privilegio_seleccionado = int(input("Ingrese el número correspondiente al privilegio que desea revocar: "))
+
+            if 1 <= privilegio_seleccionado <= len(rows):
+                nombre_privilegio = rows[privilegio_seleccionado - 1][0]
+                cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_usuario}")
+                print(f"El privilegio {nombre_privilegio} ha sido revocado del usuario {nombre_usuario} exitosamente.")
+            else:
+                print("La opción ingresada no es válida.")
+        else:
+            print(f"El usuario {nombre_usuario} no tiene ningún privilegio asignado.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al revocar el privilegio al rol:", error.message)
+        print("Error al revocar el privilegio al usuario:", error)
     cursor.close()
 
 def visualizar_privilegios_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"SELECT * FROM USER_SYS_PRIVS WHERE GRANTEE = '{nombre_usuario}'")
-        for row in cursor:
-            print(row)
+        cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_usuario}'")
+        rows = cursor.fetchall()
+        if rows:
+            print(f"Los privilegios del usuario {nombre_usuario} son:")
+            for row in rows:
+                print(row[0])
+        else:
+            print(f"El usuario {nombre_usuario} no tiene ningún privilegio asignado.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al visualizar los privilegios del usuario:", error.message)
+        print("Error al visualizar los privilegios del usuario:", error)
+    cursor.close()
+
+#FUNCIONES ROLES
+def crear_rol():
+    try:
+        # Solicita al usuario que ingrese el nombre del rol a crear
+        rol = input("Ingrese el nombre del nuevo rol: ")
+
+        # Crea un cursor para ejecutar las consultas SQL
+        cursor = connection.cursor()
+
+        # Ejecuta el comando "alter session" para habilitar "_ORACLE_SCRIPT"
+        cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+
+        # Crea el rol con el nombre proporcionado
+        cursor.execute(f"CREATE ROLE {rol}")
+
+        # Realiza un commit para aplicar los cambios en la base de datos
+        connection.commit()
+
+        # Cierra el cursor y la conexión
+        cursor.close()
+
+        print(f"Se ha creado el rol {rol} correctamente.")
+
+        return True
+
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error de Oracle:", error.message)
+        return False
+
+def borrar_rol():
+    nombre_rol = input("Ingrese el nombre del rol: ")
+    cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"DROP ROLE {nombre_rol}")
+        print(f"El rol {nombre_rol} ha sido eliminado exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al eliminar el rol:", error.message)
+    connection.commit()
+    cursor.close()
+
+def asignar_privilegio_rol():
+    nombre_rol = input("Ingrese el nombre del rol: ")
+
+    lista_privilegios = [
+        "CREATE SESSION",
+        "SELECT ANY TABLE",
+        "INSERT ANY TABLE",
+        "UPDATE ANY TABLE",
+        "DELETE ANY TABLE",
+        "ALTER ANY TABLE",
+        "DROP ANY TABLE",
+        "CREATE ANY TABLE",
+        "CREATE ANY INDEX",
+        "CREATE ANY VIEW",
+        "CREATE ANY PROCEDURE",
+        "DROP USER",
+        "GRANT ANY PRIVILEGE"
+        # Agrega aquí más privilegios según sea necesario
+    ]
+
+    privilegios = []
+
+    while True:
+        print("Lista de privilegios disponibles:")
+        for i, privilegio in enumerate(lista_privilegios, 1):
+            print(f"{i}. {privilegio}")
+
+        opcion_privilegio = input("Ingrese el número correspondiente al privilegio que desea asignar o presione Enter para salir: ")
+
+        if opcion_privilegio.isdigit() and 1 <= int(opcion_privilegio) <= len(lista_privilegios):
+            privilegio_elegido = lista_privilegios[int(opcion_privilegio) - 1]
+            privilegios.append(privilegio_elegido)
+
+            respuesta = input("¿Desea agregar otro privilegio? (S/N): ")
+            if respuesta.upper() != "S":
+                break
+        elif opcion_privilegio == "":
+            break
+        else:
+            print("Opción no válida. Por favor, ingrese el número correspondiente al privilegio.")
+
+    cursor = connection.cursor()
+
+    try:
+        for privilegio in privilegios:
+            cursor.execute(f"GRANT {privilegio} TO {nombre_rol}")
+            print(f"El privilegio {privilegio} ha sido asignado al rol {nombre_rol} exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al asignar el privilegio al rol:", error.message)
+    connection.commit()
+    cursor.close()
+
+def revocar_privilegio_rol():
+    nombre_rol = input("Ingrese el nombre del rol: ")
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_rol}'")
+        rows = cursor.fetchall()
+        if rows:
+            print(f"Los privilegios del rol {nombre_rol} son:")
+            for i, row in enumerate(rows, 1):
+                print(f"{i}. {row[0]}")
+
+            privilegio_seleccionado = int(input("Ingrese el número correspondiente al privilegio que desea revocar: "))
+
+            if 1 <= privilegio_seleccionado <= len(rows):
+                nombre_privilegio = rows[privilegio_seleccionado - 1][0]
+                cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_rol}")
+                print(f"El privilegio {nombre_privilegio} ha sido revocado del rol {nombre_rol} exitosamente.")
+            else:
+                print("La opción ingresada no es válida.")
+        else:
+            print(f"El rol {nombre_rol} no tiene ningún privilegio asignado.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al revocar el privilegio al rol:", error)
     cursor.close()
 
 def visualizar_privilegios_rol():
     nombre_rol = input("Ingrese el nombre del rol: ")
     cursor = connection.cursor()
     try:
-        cursor.execute(f"SELECT * FROM USER_ROLE_PRIVS WHERE GRANTEE = '{nombre_rol}'")
+        cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_rol}'")
+        rows = cursor.fetchall()
+        if rows:
+            print(f"Los privilegios del rol {nombre_rol} son:")
+            for row in rows:
+                print(row[0])
+        else:
+            print(f"El rol {nombre_rol} no tiene ningún privilegio asignado.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al visualizar los privilegios del rol:", error)
+    cursor.close()
+
+#FUNCIONES TABLAS
+def crear_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"CREATE TABLE {nombre_tabla} (id NUMBER PRIMARY KEY, nombre VARCHAR2(50), apellido VARCHAR2(50), edad NUMBER, correo VARCHAR2(50))")
+        print(f"La tabla {nombre_tabla} ha sido creada exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al crear la tabla:", error.message)
+    connection.commit()
+    cursor.close()
+
+def eliminar_tabla():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"DROP TABLE {nombre_tabla}")
+        print(f"La tabla {nombre_tabla} ha sido eliminada exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al eliminar la tabla:", error.message)
+    connection.commit()
+    cursor.close()
+
+def insertar_datos():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    id = input("Ingrese el id: ")
+    nombre = input("Ingrese el nombre: ")
+    apellido = input("Ingrese el apellido: ")
+    edad = input("Ingrese la edad: ")
+    correo = input("Ingrese el correo: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"INSERT INTO {nombre_tabla} VALUES ({id}, '{nombre}', '{apellido}', {edad}, '{correo}')")
+        print(f"Los datos han sido insertados exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al insertar los datos:", error.message)
+    connection.commit()
+    cursor.close()
+
+def consultar_datos():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"SELECT * FROM {nombre_tabla}")
         for row in cursor:
             print(row)
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error al visualizar los privilegios del rol:", error.message)
+        print("Error al consultar los datos:", error.message)
+    connection.commit()
+    cursor.close()
+
+def modificar_datos():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    id = input("Ingrese el id: ")
+    nombre = input("Ingrese el nombre: ")
+    apellido = input("Ingrese el apellido: ")
+    edad = input("Ingrese la edad: ")
+    correo = input("Ingrese el correo: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"UPDATE {nombre_tabla} SET nombre = '{nombre}', apellido = '{apellido}', edad = {edad}, correo = '{correo}' WHERE id = {id}")
+        print(f"Los datos han sido modificados exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al modificar los datos:", error.message)
+    connection.commit()
+    cursor.close()
+
+def eliminar_datos():
+    nombre_tabla = input("Ingrese el nombre de la tabla: ")
+    id = input("Ingrese el id: ")
+    cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"DELETE FROM {nombre_tabla} WHERE id = {id}")
+        print(f"Los datos han sido eliminados exitosamente.")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al eliminar los datos:", error.message)
+    connection.commit()
     cursor.close()
 
 #FUNCIONES INDICES
@@ -237,26 +473,94 @@ def crear_indice():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     nombre_columna = input("Ingrese el nombre de la columna: ")
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE INDEX {nombre_indice} ON {nombre_tabla}({nombre_columna})")
         print(f"El índice {nombre_indice} ha sido creado exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el índice:", error.message)
+    connection.commit()
     cursor.close()
 
 def eliminar_indice():
     nombre_indice = input("Ingrese el nombre del índice: ")
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP INDEX {nombre_indice}")
         print(f"El índice {nombre_indice} ha sido eliminado exitosamente.")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el índice:", error.message)
+    connection.commit()
     cursor.close()
 
 def monitorear_indices():
+    cursor = connection.cursor()
+    try:
+        cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+        cursor.execute("SELECT index_name FROM user_indexes")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al monitorear los índices:", error)
+    connection.commit()
+    cursor.close()
+
+#PLAN EJECUCION
+def plan_ejecucion():
+    consulta_sql = input("Ingrese la consulta SQL para la cual desea generar el plan de ejecución: ")
+    cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
+    try:
+        cursor.execute(f"EXPLAIN PLAN FOR {consulta_sql}")
+        cursor.execute("SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al generar el plan de ejecución:", error)
+    connection.commit()
+    cursor.close()
+
+def visualizar_plan_ejecucion():
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al visualizar los planes de ejecución:", error.message)
+    cursor.close()
+
+
+#FUNCIONES ESTADISTICAS
+def estadisticas_esquemas():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM USER_INDEXES")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al monitorear los índices:", error.message)
+    cursor.close()
+
+def estadisticas_tablas():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM USER_INDEXES")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al monitorear los índices:", error.message)
+    cursor.close()
+
+def estadisticas_columnas():
     cursor = connection.cursor()
     try:
         cursor.execute(f"SELECT * FROM USER_INDEXES")
@@ -268,85 +572,7 @@ def monitorear_indices():
     cursor.close()
 
 
-#FUNCIONES TABLAS
-def crear_tabla():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    nombre_columna = input("Ingrese el nombre de la columna: ")
-    tipo_dato = input("Ingrese el tipo de dato: ")
-    tamaño_dato = input("Ingrese el tamaño del dato: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"CREATE TABLE {nombre_tabla}({nombre_columna} {tipo_dato}({tamaño_dato}))")
-        print(f"La tabla {nombre_tabla} ha sido creada exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear la tabla:", error.message)
-    cursor.close()
-
-def eliminar_tabla():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"DROP TABLE {nombre_tabla}")
-        print(f"La tabla {nombre_tabla} ha sido eliminada exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al eliminar la tabla:", error.message)
-    cursor.close()    
-
-def insertar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    nombre_columna = input("Ingrese el nombre de la columna: ")
-    valor = input("Ingrese el valor: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"INSERT INTO {nombre_tabla}({nombre_columna}) VALUES({valor})")
-        print(f"El valor {valor} ha sido insertado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al insertar el valor:", error.message)
-    cursor.close()        
-
-def consultar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"SELECT * FROM {nombre_tabla}")
-        for row in cursor:
-            print(row)
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al consultar los datos:", error.message)
-    cursor.close()
-
-def modificar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    nombre_columna = input("Ingrese el nombre de la columna: ")
-    valor = input("Ingrese el valor: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"UPDATE {nombre_tabla} SET {nombre_columna} = {valor}")
-        print(f"El valor {valor} ha sido modificado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al modificar el valor:", error.message)
-    cursor.close()
-
-def eliminar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    nombre_columna = input("Ingrese el nombre de la columna: ")
-    valor = input("Ingrese el valor: ")
-    cursor = connection.cursor()
-    try:
-        cursor.execute(f"DELETE FROM {nombre_tabla} WHERE {nombre_columna} = {valor}")
-        print(f"El valor {valor} ha sido eliminado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al eliminar el valor:", error.message)
-    cursor.close()
-                        
-
-#PERFORMANCE BASE DE DATOS
+#FUNCIONES PERFORMANCE BASE DE DATOS
 def Vista_estadoBD():
     cursor = connection.cursor()
     try:
@@ -457,7 +683,6 @@ def User_Products():
         print("Error al mostrar los productos del usuario:", error.message)
     cursor.close()
 
-
 def Usser_Cx():
     cursor = connection.cursor()
     try:
@@ -468,6 +693,35 @@ def Usser_Cx():
         error, = e.args
         print("Error al mostrar los usuarios conectados:", error.message)
     cursor.close()
+
+
+#FUNCIONES AUDITORIA
+
+def Desactivar_Auditoria():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"ALTER SYSTEM SET AUDIT_TRAIL=DB SCOPE=SPFILE")
+        cursor.execute(f"ALTER SYSTEM SET AUDIT_SYS_OPERATIONS=FALSE SCOPE=SPFILE")
+        cursor.execute(f"ALTER SYSTEM SET AUDIT_SYSLOG_LEVEL=LOCAL1.WARNING SCOPE=SPFILE")
+        print("Auditoria desactivada correctamente")
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al desactivar la auditoria:", error.message)
+    cursor.close()
+
+def Visualizar_Tablas_Auditoria():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM USER_AUDIT_OBJECT")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar las tablas de auditoria:", error.message)
+    cursor.close()
+
+#FUNCIONES RESPALDOS
+
 
 
 #MENUS
@@ -522,7 +776,7 @@ def mostrar_menu_tablas():
 
 def mostrar_menu_tunning_consultas():
     print("1) INDICES\n")
-    print("2) REALIZAR UN PLAN DE EJECUCIÓN\n")
+    print("2) PLAN DE EJECUCIÓN\n")
     print("3) ESTADÍSTICAS\n")
     print("0) Volver al menú principal\n")
 
@@ -530,6 +784,12 @@ def mostrar_menu_indices():
     print("1) Crear un índice\n")
     print("2) Monitorear índices\n")
     print("3) Borrar índices\n")
+    print("0) Volver\n")
+
+def mostrar_menu_ejecucion():
+    print("1) Crear un plan de ejecución\n")
+    print("2) Visualizar los planes de ejecución generados\n")
+    print("3) Eliminar plan de ejecución\n")
     print("0) Volver\n")
 
 def mostrar_menu_estadisticas():
@@ -670,14 +930,26 @@ def mostrar_menu():
                         if opcion_indices == "1":
                             crear_indice()
                         elif opcion_indices == "2":
-                            eliminar_indice()
-                        elif opcion_indices == "3":
                             monitorear_indices()
+                        elif opcion_indices == "3":
+                            eliminar_indice()
                         elif opcion_indices == "0":
                             break
 
                 elif opcion_tunning == "2":#Plan Ejecución
-                    print("Función para crear plan ejecución")
+                    while True:
+                        input("Presione Enter para continuar...")
+                        limpiar_pantalla()
+                        mostrar_menu_ejecucion()
+                        opcion_ejecucion = input("Seleccione una opción: ")
+                        if opcion_ejecucion == "1":
+                            plan_ejecucion()
+                        elif opcion_ejecucion == "2":
+                            visualizar_plan_ejecucion()
+                        elif opcion_ejecucion == "3":
+                            print("Función para eliminar plan de ejecución")
+                        elif opcion_ejecucion == "0":
+                            break
                 elif opcion_tunning == "3":#Estadisticas
                     while True:
                         input("Presione Enter para continuar...")
