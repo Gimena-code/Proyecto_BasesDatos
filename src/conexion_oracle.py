@@ -3,6 +3,7 @@ import cx_Oracle
 from tabulate import tabulate
 from tqdm import tqdm
 import time
+import subprocess
 
 dsn_tns = cx_Oracle.makedsn("localhost", 1521, "XE")
 connection = cx_Oracle.connect("SYS", "root", dsn_tns, mode=cx_Oracle.SYSDBA)
@@ -18,7 +19,7 @@ def limpiar_pantalla():
     else:
         _ = os.system('clear')
 
-#FUNCIONES TABLESPACES --LISTO
+#FUNCIONES TABLESPACES
 def crear_tablespace():
     nombre_tablespace = input("Ingrese el nombre del tablespace: ")
     carpeta_guardado = input("Ingrese la ruta de la carpeta donde desea guardar el archivo: ")
@@ -121,7 +122,7 @@ def eliminar_tablespace():
     connection.commit()
     cursor.close()
 
-#FUNCIONES USUARIOS --LISTO
+#FUNCIONES USUARIOS 
 def crear_usuario():
     try:
         usuario = input("Ingrese el nombre del nuevo usuario: ")
@@ -260,7 +261,7 @@ def visualizar_privilegios_usuario():
     connection.commit()
     cursor.close()
 
-#FUNCIONES ROLES --LISTO
+#FUNCIONES ROLES 
 def crear_rol():
     try:
         rol = input("Ingrese el nombre del nuevo rol: ")
@@ -396,98 +397,7 @@ def visualizar_privilegios_rol():
     connection.commit()
     cursor.close()
 
-#FUNCIONES TABLAS --LISTO FALTA BARRA DE PROGRESO
-def crear_tabla():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"CREATE TABLE {nombre_tabla} (id NUMBER PRIMARY KEY, nombre VARCHAR2(50), apellido VARCHAR2(50), edad NUMBER, correo VARCHAR2(50))")
-        print(f"La tabla {nombre_tabla} ha sido creada exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear la tabla:", error.message)
-    connection.commit()
-    cursor.close()
-
-def eliminar_tabla():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"DROP TABLE {nombre_tabla}")
-        print(f"La tabla {nombre_tabla} ha sido eliminada exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al eliminar la tabla:", error.message)
-    connection.commit()
-    cursor.close()
-
-def insertar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    id = input("Ingrese el id: ")
-    nombre = input("Ingrese el nombre: ")
-    apellido = input("Ingrese el apellido: ")
-    edad = input("Ingrese la edad: ")
-    correo = input("Ingrese el correo: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"INSERT INTO {nombre_tabla} VALUES ({id}, '{nombre}', '{apellido}', {edad}, '{correo}')")
-        print(f"Los datos han sido insertados exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al insertar los datos:", error.message)
-    connection.commit()
-    cursor.close()
-
-def consultar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"SELECT * FROM {nombre_tabla}")
-        for row in cursor:
-            print(row)
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al consultar los datos:", error.message)
-    connection.commit()
-    cursor.close()
-
-def modificar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    id = input("Ingrese el id: ")
-    nombre = input("Ingrese el nombre: ")
-    apellido = input("Ingrese el apellido: ")
-    edad = input("Ingrese la edad: ")
-    correo = input("Ingrese el correo: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"UPDATE {nombre_tabla} SET nombre = '{nombre}', apellido = '{apellido}', edad = {edad}, correo = '{correo}' WHERE id = {id}")
-        print(f"Los datos han sido modificados exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al modificar los datos:", error.message)
-    connection.commit()
-    cursor.close()
-
-def eliminar_datos():
-    nombre_tabla = input("Ingrese el nombre de la tabla: ")
-    id = input("Ingrese el id: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"DELETE FROM {nombre_tabla} WHERE id = {id}")
-        print(f"Los datos han sido eliminados exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al eliminar los datos:", error.message)
-    connection.commit()
-    cursor.close()
-
-#FUNCIONES INDICES --LISTO
+#FUNCIONES INDICES 
 def crear_indice():
     nombre_indice = input("Ingrese el nombre del índice: ")
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
@@ -533,7 +443,7 @@ def monitorear_indices():
     connection.commit()
     cursor.close()
 
-#PLAN EJECUCION --LISTO
+#PLAN EJECUCION
 def plan_ejecucion():
     consulta_sql = input("Ingrese la consulta SQL para la cual desea generar el plan de ejecución: ")
     cursor = connection.cursor()
@@ -575,7 +485,7 @@ def eliminar_planes_ejecucion():
     connection.commit()
     cursor.close()
 
-#FUNCIONES ESTADISTICAS --LISTO
+#FUNCIONES ESTADISTICAS
 def recopilar_estadisticas_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
@@ -620,14 +530,15 @@ def eliminar_estadisticas_tabla():
     connection.commit()
     cursor.close()
 
-#FUNCIONES PERFORMANCE BASE DE DATOS --FALTA TABULAR LOS RESULTADOS DE CONSULTAS
+#FUNCIONES PERFORMANCE BASE DE DATOS
 def Vista_estadoBD():
     cursor = connection.cursor()
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM V$INSTANCE")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar estado de la base de datos:", error.message)
@@ -641,7 +552,7 @@ def Parametros_Generales():
         cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
         rows = [row for row in cursor]
         headers = [desc[0] for desc in cursor.description]
-        print(tabulate(rows, headers=headers, tablefmt="jira"))
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error a la consulta de parametros generales:", error)
@@ -653,8 +564,8 @@ def Know_Version():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'compatible'")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        print(tabulate(rows, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar version:", error.message)
@@ -666,8 +577,9 @@ def Name_Spfile():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"select value from v$system_parameter where name = 'spfile'")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar ubicacion y nombre del spfile:", error.message)
@@ -679,8 +591,9 @@ def Name_ControlFiles():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'control_files'")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar ubicacion y nombre de los ficheros de control:", error.message)
@@ -692,8 +605,9 @@ def Name_DB():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'db_name'")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar nombre de la base de datos:", error.message)
@@ -705,8 +619,9 @@ def Actual_Cx():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT OSUSER, USERNAME, MACHINE, PROGRAM FROM V$SESSION ORDER BY OSUSER")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = ["OSUSER", "USERNAME", "MACHINE", "PROGRAM"]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar las conexiones actuales:", error.message)
@@ -718,8 +633,9 @@ def Objects():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT OWNER, COUNT(OWNER) Numero FROM DBA_OBJECTS GROUP BY OWNER")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = ["Owner", "Numero"]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los propietarios por objetos y numero de objetos:", error.message)
@@ -744,8 +660,9 @@ def User_Products():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM USER_CATALOG")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los productos del usuario:", error.message)
@@ -757,8 +674,9 @@ def Usser_Cx():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT USERNAME USUARIO_ORACLE, COUNT(USERNAME) NUMERO_SESIONES FROM V$SESSION GROUP BY USERNAME ORDER BY NUMERO_SESIONES DESC")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los usuarios conectados:", error.message)
@@ -777,98 +695,82 @@ def crear_directorio():
     try:
         cursor.execute(f"CREATE DIRECTORY {nombre_directorio} AS '{ruta_completa}'")
         cursor.execute(f"GRANT READ, WRITE ON DIRECTORY {nombre_directorio} TO SYSTEM")
+        imprimir_barra_progreso_lineal("Creando directorio...")
         print(f"El directorio {nombre_directorio} ha sido creado exitosamente en la ruta {ruta_completa}.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el directorio:", error.message)
     connection.commit()
     cursor.close() 
 
-def crear_respaldo_full():
-    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
-    nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"expdp system/root@localhost:1521/XE full=y directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
-        print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
-
-def recuperar_respaldo_full():
-    nombre_respaldo = input("Ingrese el nombre del respaldo: ")
-    nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
-    try:
-        cursor.execute(f"impdp system/root@localhost:1521/XE full=y directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
-        print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al recuperar el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
-
 def respaldo_esquema():
     nombre_esquema = input("Ingrese el nombre del esquema: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"expdp system/root@localhost:1521/XE schemas={nombre_esquema} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        subprocess.check_call([
+            "expdp",
+            f"system/root@localhost:1521/XE",
+            f"schemas={nombre_esquema}",
+            f"directory={nombre_directorio}",
+            f"dumpfile={nombre_respaldo}.dmp",
+            f"logfile={nombre_respaldo}.log"])
         print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
+    except subprocess.CalledProcessError as e:
+        print("Error al crear el respaldo:", e)
 
 def recuperar_respaldo_esquema():
     nombre_esquema = input("Ingrese el nombre del esquema: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"impdp system/root@localhost:1521/XE schemas={nombre_esquema} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        subprocess.check_call([
+            "impdp",
+            f"system/root@localhost:1521/XE",
+            f"schemas={nombre_esquema}",
+            f"directory={nombre_directorio}",
+            f"dumpfile={nombre_respaldo}.dmp",
+            f"logfile={nombre_respaldo}.log"])
         print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al recuperar el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
-
-import subprocess
+    except subprocess.CalledProcessError as e:
+        print("Error al recuperar el respaldo:", e)
 
 def respaldo_tabla():
+    nombre_usuario = input("Ingrese el nombre del usuario: ")
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
     try:
-        subprocess.run([f"expdp system/root@localhost:1521/XE tables='{nombre_tabla}' directory='{nombre_directorio}' dumpfile='{nombre_respaldo}.dmp' logfile='{nombre_respaldo}.log'"], shell=True, check=True)
+        subprocess.check_call([
+            "expdp",
+            f"system/root@localhost:1521/XE",
+            f"tables='{nombre_usuario}.{nombre_tabla}'",
+            f"directory='{nombre_directorio}'",
+            f"dumpfile='{nombre_respaldo}.dmp'",
+            f"logfile='{nombre_respaldo}.log'"])
         print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
     except subprocess.CalledProcessError as e:
         print("Error al crear el respaldo:", e)
 
 def recuperar_respaldo_tabla():
+    nombre_usuario = input("Ingrese el nombre del usuario: ")
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
     try:
-        subprocess.run([f"impdp system/root@localhost:1521/XE tables='{nombre_tabla}' directory='{nombre_directorio}' dumpfile='{nombre_respaldo}.dmp' logfile='{nombre_respaldo}.log'"], shell=True, check=True)
+        subprocess.check_call([
+            "impdp",
+            f"system/root@localhost:1521/XE",
+            f"tables='{nombre_usuario}.{nombre_tabla}'",
+            f"directory='{nombre_directorio}'",
+            f"dumpfile='{nombre_respaldo}.dmp'",
+            f"logfile='{nombre_respaldo}.log'"])
         print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
     except subprocess.CalledProcessError as e:
         print("Error al recuperar el respaldo:", e)
 
-
-
-
-
-#MENUS
+#MENÚS
 def mostrar_menu_principal():
     print("1) Administración de tablespaces y seguridad\n")
     print("2) Tunning de consultas\n")
@@ -881,7 +783,6 @@ def mostrar_menu_administracion_tablespaces():
     print("1) Tablespaces\n")
     print("2) Usuarios\n")
     print("3) Roles\n")
-    print("4) Tablas\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_tablespaces():
@@ -907,15 +808,6 @@ def mostrar_menu_roles():
     print("3) Visualizar privilegios\n")
     print("4) Quitar privilegios\n")
     print("5) Borrar rol\n")
-    print("0) Volver\n")
-
-def mostrar_menu_tablas():
-    print("1) Crear una tabla\n")
-    print("2) Eliminar una tabla\n")
-    print("3) Insertar datos\n")
-    print("4) Consultar datos\n")
-    print("5) Modificar datos\n")
-    print("6) Eliminar datos\n")
     print("0) Volver\n")
 
 def mostrar_menu_tunning_consultas():
@@ -964,12 +856,10 @@ def mostrar_menu_auditoria():
 
 def mostrar_menu_respaldos():
     print("1) Crear directorio\n")
-    print("2) Crear respaldo full\n")
-    print("3) Recuperar respaldos full\n")
-    print("4) Crear respaldos de un esquema\n")
-    print("5) Recuperar respaldo de un esquema\n")
-    print("6) Crear respaldo de una tabla\n")
-    print("7) Recuperar respaldo de una tabla\n")
+    print("2) Crear respaldos de un esquema\n")
+    print("3) Recuperar respaldo de un esquema\n")
+    print("4) Crear respaldo de una tabla\n")
+    print("5) Recuperar respaldo de una tabla\n")
     print("0) Volver al menú principal\n")
     
 
@@ -1042,26 +932,6 @@ def mostrar_menu():
                         elif opcion_roles == "5":
                             borrar_rol()
                         elif opcion_roles == "0":
-                            break
-                elif opcion_administracion_tablespaces == "4":#tablas
-                    while True:
-                        input("Presione Enter para continuar...")
-                        limpiar_pantalla()
-                        mostrar_menu_tablas()
-                        opcion_tablas = input("Seleccione una opción: ")
-                        if opcion_tablas == "1":
-                            crear_tabla()
-                        elif opcion_tablas == "2":
-                            eliminar_tabla()
-                        elif opcion_tablas == "3":
-                            insertar_datos()
-                        elif opcion_tablas == "4":
-                            consultar_datos()
-                        elif opcion_tablas == "5":
-                            modificar_datos()
-                        elif opcion_tablas == "6":
-                            eliminar_datos()
-                        elif opcion_tablas == "0":
                             break
                 elif opcion_administracion_tablespaces == "0":
                     break
@@ -1183,16 +1053,12 @@ def mostrar_menu():
                 if opcion_respaldos == "1":
                     crear_directorio()
                 elif opcion_respaldos == "2":
-                    crear_respaldo_full()
-                elif opcion_respaldos == "3":
-                    recuperar_respaldo_full()
-                elif opcion_respaldos == "4":
                     respaldo_esquema()
-                elif opcion_respaldos == "5":
+                elif opcion_respaldos == "3":
                     recuperar_respaldo_esquema()
-                elif opcion_respaldos == "6":
+                elif opcion_respaldos == "4":
                     respaldo_tabla()
-                elif opcion_respaldos == "7":
+                elif opcion_respaldos == "5":
                     recuperar_respaldo_tabla()
                 elif opcion_respaldos == "0":
                     break
