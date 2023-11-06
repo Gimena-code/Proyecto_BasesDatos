@@ -547,17 +547,27 @@ def Vista_estadoBD():
 
 def Parametros_Generales():
     cursor = connection.cursor()
-    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
-        rows = [row for row in cursor]
-        headers = [desc[0] for desc in cursor.description]
-        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+        headers = ["Numero", "Nombre", "Tipo", "Valor"]
+        data = [[row[0], row[1],row[2],row[3]] for row in cursor]
+        print(tabulate(data, headers, tablefmt="fancy_grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error a la consulta de parametros generales:", error)
-    connection.commit()
+        print("Error a la consulta de parametros generales:", error.message)
     cursor.close()
+
+def Parametros_Generales_All():
+    cursor = connection.cursor()
+    try:
+        cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
+        for row in cursor:
+            print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error a la consulta de parametros generales:", error.message)
+    cursor.close()
+
 
 def Know_Version():
     cursor = connection.cursor()
@@ -684,6 +694,55 @@ def Usser_Cx():
     cursor.close()
 
 #FUNCIONES AUDITORIA --FALTA
+
+def Active_Cx():
+    cursor = connection.cursor()
+    #cambiar el estado de activada a desactivada
+    #cursor.execute (f"ALTER SYSTEM SET audit_trail = 'NONE' SCOPE=SPFILE")
+    #activa la auditoria
+    cursor.execute (f"alter system set audit_trail = DB scope = spfile")
+    try:
+        print("Activando")
+        cursor.execute (f"audit connect")
+        connection.commit()
+        Mostrar_Auditoría()
+        #cursor.execute (f"select name , value from v$parameter where name like 'audit_trail'")
+        #for row in cursor:
+        #    print(row)
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al activar la auditoria:", error.message)
+    connection.commit()
+    cursor.close()
+
+
+def Mostrar_Auditoría():
+    cursor = connection.cursor()
+    try:
+        cursor.execute (f"select name , value from v$parameter where name like 'audit_trail'")
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+    except cx_Oracle.DatabaseError as e:
+        error, = e.args
+        print("Error al mostrar la auditoria:", error.message)
+    connection.commit()
+    cursor.close()
+
+
+def Vizualizar_Tables_Auditoria():
+    cursor = connection.cursor()
+    try:
+        cursor.execute("select username , action_name , priv_used , returncode from dba_audit_trail")
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+    except cx_Oracle.DatabaseError as e:
+    # En caso de error en la conexión, muestra el error
+        print("Error al vizualizar las tablas de auditoría :", e)
+    connection.commit()
+    cursor.close()
+
 
 #FUNCIONES RESPALDOS CON EXPDP e IMPDP --FALTA PROBAR
 def crear_directorio():
@@ -836,7 +895,7 @@ def mostrar_menu_estadisticas():
 
 def mostrar_menu_performance_bd():
     print("1) Estado de la base de datos\n")
-    print("2) Parámetros generales\n")
+    print("2) Parámetros generales en tabla\n")
     print("3) Versión\n")
     print("4) Ubicación y nombre de SPFILE\n")
     print("5) Ubicación y número de ficheros de control\n")
@@ -846,12 +905,12 @@ def mostrar_menu_performance_bd():
     print("9) Propietarios por objetos y número de objetos\n")
     print("10) Tablas sobre propiedad del usuario actual\n")
     print("11) Todos los productos del usuario\n")
+    print("12) Parametros generales desplegados\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_auditoria():
     print("1) Activar auditorí\n")
     print("2) Visualizarlas tablas de auditoría\n")
-    print("3) Activar la auditoría sobre la modificación de tablas del usuario\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_respaldos():
@@ -1027,6 +1086,9 @@ def mostrar_menu():
                 elif opcion_performance == "11":
                     print("Consulta todos los productos del usuario")
                     User_Products()
+                elif opcion_performance == "12":
+                    print("Consulta Parametros generales Desplegados")
+                    Parametros_Generales_All()
                 elif opcion_performance == "0":
                     break
         elif opcion == "4":
@@ -1037,10 +1099,10 @@ def mostrar_menu():
                 opcion_auditoria = input("Seleccione una opción: ")
                 if opcion_auditoria == "1":
                     print("ACTIVAR AUDITORIA")
+                    Active_Cx()
                 elif opcion_auditoria == "2":
                     print("VISUALIZAR LAS TABLAS DE AUDITORÍA")
-                elif opcion_auditoria == "3":
-                    print("ACTIVAR LA AUDITORIA SOBRE LA MODIFICACIÓN DE TABLAS DEL USUARIO")
+                    Vizualizar_Tables_Auditoria()
                 elif opcion_auditoria == "0":
                     break
 
