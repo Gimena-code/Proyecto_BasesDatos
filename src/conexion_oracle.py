@@ -4,6 +4,7 @@ from tabulate import tabulate
 from tqdm import tqdm
 import time
 import subprocess
+from colorama import init, Fore, Back, Style
 
 dsn_tns = cx_Oracle.makedsn("localhost", 1521, "XE")
 connection = cx_Oracle.connect("SYS", "root", dsn_tns, mode=cx_Oracle.SYSDBA)
@@ -13,11 +14,11 @@ def imprimir_barra_progreso_lineal(accion):
         time.sleep(0.04)
 
 
+init(autoreset=True)
+
 def limpiar_pantalla():
-    if os.name == 'nt':
-        _ = os.system('cls')
-    else:
-        _ = os.system('clear')
+    print('\033c', end='')
+
 
 #FUNCIONES TABLESPACES
 def crear_tablespace():
@@ -831,96 +832,144 @@ def recuperar_respaldo_tabla():
 
 #MENÚS
 def mostrar_menu_principal():
-    print("1) Administración de tablespaces y seguridad\n")
-    print("2) Tunning de consultas\n")
-    print("3) Performance de la base de datos\n")
-    print("4) Auditoría de la base de datos\n")
-    print("5) Administración de archivos de respaldos y directorios\n")
-    print("0) Salir\n")
+    print(Fore.GREEN + Back.BLACK + "Bienvenido al sistema de administración de bases de datos Oracle.\n")
+    data = [
+        ["1", "Administración de tablespaces y seguridad"],
+        ["2", "Tunning de consultas"],
+        ["3", "Performance de la base de datos"],
+        ["4", "Auditoría de la base de datos"],
+        ["5", "Administración de archivos de respaldos y directorios"],
+        ["0", "Salir"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_administracion_tablespaces():
-    print("1) Tablespaces\n")
-    print("2) Usuarios\n")
-    print("3) Roles\n")
-    print("0) Volver al menú principal\n")
+    print(Fore.GREEN + Back.BLACK + "\nAdministración de tablespaces y seguridad:\n")
+    data = [
+        ["1", "Tablespaces"],
+        ["2", "Usuarios"],
+        ["3", "Roles"],
+        ["0", "Volver al menú principal"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_tablespaces():
-    print("1) Crear nuevo tablespace\n")
-    print("2) Crear nuevo tablespace temporal\n")
-    print("3) Visualizar tamaño\n")
-    print("4) Modificar el tamaño\n")
-    print("5) Agregar un datafile\n")
-    print("6) Borrar un tablespace\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nTablespaces:\n")
+    data = [
+        ["1", "Crear nuevo tablespace"],
+        ["2", "Crear nuevo tablespace temporal"],
+        ["3", "Visualizar tamaño"],
+        ["4", "Modificar el tamaño"],
+        ["5", "Agregar un datafile"],
+        ["6", "Borrar un tablespace"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_usuarios():
-    print("1) Crear nuevo usuario\n")
-    print("2) Asignar privilegio\n")
-    print("3) Visualizar privilegios\n")
-    print("4) Quitar privilegios\n")
-    print("5)  Borrar usuario\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nUsuarios:\n")
+    data = [
+        ["1", "Crear nuevo usuario"],
+        ["2", "Asignar privilegio"],
+        ["3", "Visualizar privilegios"],
+        ["4", "Quitar privilegios"],
+        ["5", "Borrar usuario"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_roles():
-    print("1) Crear nuevo rol\n")
-    print("2) Asignar privilegio\n")
-    print("3) Visualizar privilegios\n")
-    print("4) Quitar privilegios\n")
-    print("5) Borrar rol\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nRoles:\n")
+    data = [
+        ["1", "Crear nuevo rol"],
+        ["2", "Asignar privilegio"],
+        ["3", "Visualizar privilegios"],
+        ["4", "Quitar privilegios"],
+        ["5", "Borrar rol"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_tunning_consultas():
-    print("1) Índices\n")
-    print("2) Plan de ejecución\n")
-    print("3) Estadísticas\n")
-    print("0) Volver al menú principal\n")
+    print(Fore.GREEN + Back.BLACK + "\nTunning de consultas:\n")
+    data = [
+        ["1", "Índices"],
+        ["2", "Plan de ejecución"],
+        ["3", "Estadísticas"],
+        ["0", "Volver al menú principal"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_indices():
-    print("1) Crear un índice\n")
-    print("2) Monitorear índices\n")
-    print("3) Borrar índices\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nÍndices:\n")
+    data = [
+        ["1", "Crear un índice"],
+        ["2", "Monitorear índices"],
+        ["3", "Borrar índices"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_ejecucion():
-    print("1) Crear un plan de ejecución\n")
-    print("2) Visualizar los planes de ejecución generados\n")
-    print("3) Eliminar todos los planes de ejecución\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nPlan de Ejecución:\n")
+    data = [
+        ["1", "Crear un plan de ejecución"],
+        ["2", "Visualizar los planes de ejecución generados"],
+        ["3", "Eliminar todos los planes de ejecución"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_estadisticas():
-    print("1) Recopilar estadísticas de una tabla\n")
-    print("2) Ver estadísticas\n")
-    print("3) Eliminar estadísticas\n")
-    print("0) Volver\n")
+    print(Fore.GREEN + Back.BLACK + "\nEstadísticas:\n")
+    data = [
+        ["1", "Recopilar estadísticas de una tabla"],
+        ["2", "Ver estadísticas"],
+        ["3", "Eliminar estadísticas"],
+        ["0", "Volver"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_performance_bd():
-    print("1) Estado de la base de datos\n")
-    print("2) Parámetros generales en tabla\n")
-    print("3) Versión\n")
-    print("4) Ubicación y nombre de SPFILE\n")
-    print("5) Ubicación y número de ficheros de control\n")
-    print("6) Nombre de la base de datos\n")
-    print("7) Conexiones actuales\n")
-    print("8) Usuarios conectados y número de sesiones\n")
-    print("9) Propietarios por objetos y número de objetos\n")
-    print("10) Tablas sobre propiedad del usuario actual\n")
-    print("11) Todos los productos del usuario\n")
-    print("12) Parametros generales desplegados\n")
-    print("0) Volver al menú principal\n")
+    print(Fore.GREEN + Back.BLACK + "\nPerformance de la base de datos:\n")
+    data = [
+        ["1", "Estado de la base de datos"],
+        ["2", "Parámetros generales en tabla"],
+        ["3", "Versión"],
+        ["4", "Ubicación y nombre de SPFILE"],
+        ["5", "Ubicación y número de ficheros de control"],
+        ["6", "Nombre de la base de datos"],
+        ["7", "Conexiones actuales"],
+        ["8", "Usuarios conectados y número de sesiones"],
+        ["9", "Propietarios por objetos y número de objetos"],
+        ["10", "Tablas sobre propiedad del usuario actual"],
+        ["11", "Todos los productos del usuario"],
+        ["12", "Parámetros generales desplegados"],
+        ["0", "Volver al menú principal"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_auditoria():
-    print("1) Activar auditorí\n")
-    print("2) Visualizarlas tablas de auditoría\n")
-    print("0) Volver al menú principal\n")
+    print(Fore.GREEN + Back.BLACK + "\nAuditoría de la base de datos:\n")
+    data = [
+        ["1", "Activar auditoría"],
+        ["2", "Visualizar las tablas de auditoría"],
+        ["0", "Volver al menú principal"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
 
 def mostrar_menu_respaldos():
-    print("1) Crear directorio\n")
-    print("2) Crear respaldos de un esquema\n")
-    print("3) Recuperar respaldo de un esquema\n")
-    print("4) Crear respaldo de una tabla\n")
-    print("5) Recuperar respaldo de una tabla\n")
-    print("0) Volver al menú principal\n")
-    
+    print(Fore.GREEN + Back.BLACK + "\nAdministración de archivos de respaldos y directorios:\n")
+    data = [
+        ["1", "Crear directorio"],
+        ["2", "Crear respaldos de un esquema"],
+        ["3", "Recuperar respaldo de un esquema"],
+        ["4", "Crear respaldo de una tabla"],
+        ["5", "Recuperar respaldo de una tabla"],
+        ["0", "Volver al menú principal"]
+    ]
+    print(tabulate(data, headers=["Opción", "Descripción"], tablefmt="fancy_grid"))
+
 
 def mostrar_menu():
     while True:
