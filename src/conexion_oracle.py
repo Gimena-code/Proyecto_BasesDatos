@@ -1,9 +1,15 @@
 import os
 import cx_Oracle
 from tabulate import tabulate
+from tqdm import tqdm
+import time
 
 dsn_tns = cx_Oracle.makedsn("localhost", 1521, "XE")
 connection = cx_Oracle.connect("SYS", "root", dsn_tns, mode=cx_Oracle.SYSDBA)
+
+def imprimir_barra_progreso_lineal(accion):
+    for i in tqdm(range(100), desc=accion, ncols=100, bar_format='{l_bar}{bar} |'):
+        time.sleep(0.04)
 
 
 def limpiar_pantalla():
@@ -22,10 +28,13 @@ def crear_tablespace():
     cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE TABLESPACE {nombre_tablespace} DATAFILE '{ruta_archivo_datos}' SIZE 10M REUSE AUTOEXTEND ON NEXT 10M MAXSIZE 200M")
-        print(f"El tablespace {nombre_tablespace} ha sido creado exitosamente en la ruta {ruta_archivo_datos}.")
+        imprimir_barra_progreso_lineal("Creando tablespace...")
+        print(f"El tablespace {nombre_tablespace} ha sido creado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el tablespace:", error.message)
+    connection.commit()
     cursor.close()
 
 def crear_tablespace_temporal():
@@ -37,14 +46,18 @@ def crear_tablespace_temporal():
     cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE TEMPORARY TABLESPACE {nombre_tablespace_temporal} TEMPFILE '{ruta_archivo_datos}' SIZE 5M REUSE AUTOEXTEND ON NEXT 5M MAXSIZE 100M")
-        print(f"El tablespace temporal {nombre_tablespace_temporal} ha sido creado exitosamente en la ruta {ruta_archivo_datos}.")
+        imprimir_barra_progreso_lineal("Creando tablespace temporal...")
+        print(f"El tablespace temporal {nombre_tablespace_temporal} ha sido creado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el tablespace temporal:", error.message)
+    connection.commit()
     cursor.close()
 
 def visualizar_tamaño_tablespace():
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute("SELECT tablespace_name, round((bytes / 1024 / 1024), 2) as size_mb FROM dba_data_files")
         headers = ["Tablespace_name", "Size_MB"]
@@ -53,6 +66,7 @@ def visualizar_tamaño_tablespace():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar el tamaño del tablespace:", error.message)
+    connection.commit()
     cursor.close()
 
 def modificar_tamaño_tablespace():
@@ -60,13 +74,17 @@ def modificar_tamaño_tablespace():
     ruta_carpeta = input("Ingrese la ruta de la carpeta donde se encuentra el archivo: ")
     tamaño_nuevo = input("Ingrese el nuevo tamaño para el tablespace (por ejemplo, 100M): ")
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         ruta_completa = f"{ruta_carpeta}\\{nombre_tablespace}.dbf"
         cursor.execute(f"ALTER DATABASE DATAFILE '{ruta_completa}' RESIZE {tamaño_nuevo}")
+        imprimir_barra_progreso_lineal("Modificando tablespace...")
         print(f"El tablespace {nombre_tablespace} ha sido modificado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al modificar el tamaño del tablespace:", error.message)
+    connection.commit()
     cursor.close()
 
 def agregar_datafile_tablespace():
@@ -76,53 +94,47 @@ def agregar_datafile_tablespace():
     nombre_archivo = f"{nombre_datafile}.dbf"
     ruta_archivo_datos = f"{carpeta_guardado}\\{nombre_archivo}"
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"ALTER TABLESPACE {nombre_tablespace} ADD DATAFILE '{ruta_archivo_datos}' SIZE 10M REUSE AUTOEXTEND ON NEXT 10M MAXSIZE 200M")
+        imprimir_barra_progreso_lineal("Modificando tablespace...")
         print(f"El tablespace {nombre_tablespace} ha sido modificado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al modificar el tablespace:", error.message)
+    connection.commit()
     cursor.close()
 
 def eliminar_tablespace():
     nombre_tablespace = input("Ingrese el nombre del tablespace: ")
     cursor = connection.cursor()
+    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP TABLESPACE {nombre_tablespace} INCLUDING CONTENTS AND DATAFILES")
+        imprimir_barra_progreso_lineal("Eliminando tablespace...")
         print(f"El tablespace {nombre_tablespace} ha sido eliminado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el tablespace:", error.message)
+    connection.commit()
     cursor.close()
 
 #FUNCIONES USUARIOS --LISTO
 def crear_usuario():
     try:
-        # Solicita al usuario que ingrese el nombre del usuario a crear
         usuario = input("Ingrese el nombre del nuevo usuario: ")
         contraseña = input("Ingrese la contraseña del nuevo usuario: ")
-
-
-        # Crea un cursor para ejecutar las consultas SQL
         cursor = connection.cursor()
-
-        # Ejecuta el comando "alter session" para habilitar "_ORACLE_SCRIPT"
         cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
-
-        # Crea el usuario con el nombre proporcionado y la contraseña ingresada
         cursor.execute(f"CREATE USER {usuario} IDENTIFIED BY {contraseña}")
-
-        # Realiza un commit para aplicar los cambios en la base de datos
         connection.commit()
-
-        # Cierra el cursor y la conexión
         cursor.close()
-       
-
+        imprimir_barra_progreso_lineal("Creando usuario...")
         print(f"Se ha creado el usuario {usuario} correctamente.")
-
+        print("\n")
         return True
-
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error de Oracle:", error.message)
@@ -134,7 +146,9 @@ def borrar_usuario():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP USER {nombre_usuario} CASCADE")
+        imprimir_barra_progreso_lineal("Eliminando usuario...")
         print(f"El usuario {nombre_usuario} ha sido eliminado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el usuario:", error.message)
@@ -183,11 +197,14 @@ def asignar_privilegio_usuario():
             print("Opción no válida. Por favor, ingrese el número correspondiente al privilegio.")
 
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
 
     try:
         for privilegio in privilegios:
             cursor.execute(f"GRANT {privilegio} TO {nombre_usuario}")
+            imprimir_barra_progreso_lineal("Asignando privilegio...")
             print(f"El privilegio {privilegio} ha sido asignado al usuario {nombre_usuario} exitosamente.")
+            print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al asignar el privilegio al usuario:", error.message)
@@ -197,6 +214,7 @@ def asignar_privilegio_usuario():
 def revocar_privilegio_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_usuario}'")
         rows = cursor.fetchall()
@@ -210,7 +228,9 @@ def revocar_privilegio_usuario():
             if 1 <= privilegio_seleccionado <= len(rows):
                 nombre_privilegio = rows[privilegio_seleccionado - 1][0]
                 cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_usuario}")
+                imprimir_barra_progreso_lineal("Eliminando privilegio...")
                 print(f"El privilegio {nombre_privilegio} ha sido revocado del usuario {nombre_usuario} exitosamente.")
+                print("\n")
             else:
                 print("La opción ingresada no es válida.")
         else:
@@ -218,11 +238,13 @@ def revocar_privilegio_usuario():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al revocar el privilegio al usuario:", error)
+    connection.commit()
     cursor.close()
 
 def visualizar_privilegios_usuario():
     nombre_usuario = input("Ingrese el nombre del usuario: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_usuario}'")
         rows = cursor.fetchall()
@@ -235,30 +257,21 @@ def visualizar_privilegios_usuario():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar los privilegios del usuario:", error)
+    connection.commit()
     cursor.close()
 
 #FUNCIONES ROLES --LISTO
 def crear_rol():
     try:
-        # Solicita al usuario que ingrese el nombre del rol a crear
         rol = input("Ingrese el nombre del nuevo rol: ")
-
-        # Crea un cursor para ejecutar las consultas SQL
         cursor = connection.cursor()
-
-        # Ejecuta el comando "alter session" para habilitar "_ORACLE_SCRIPT"
         cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
-
-        # Crea el rol con el nombre proporcionado
         cursor.execute(f"CREATE ROLE {rol}")
-
-        # Realiza un commit para aplicar los cambios en la base de datos
         connection.commit()
-
-        # Cierra el cursor y la conexión
         cursor.close()
-
+        imprimir_barra_progreso_lineal("Creando rol...")
         print(f"Se ha creado el rol {rol} correctamente.")
+        print("\n")
 
         return True
 
@@ -273,7 +286,9 @@ def borrar_rol():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP ROLE {nombre_rol}")
+        imprimir_barra_progreso_lineal("Eliminando rol...")
         print(f"El rol {nombre_rol} ha sido eliminado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el rol:", error.message)
@@ -297,11 +312,8 @@ def asignar_privilegio_rol():
         "CREATE ANY PROCEDURE",
         "DROP USER",
         "GRANT ANY PRIVILEGE"
-        # Agrega aquí más privilegios según sea necesario
     ]
-
     privilegios = []
-
     while True:
         print("Lista de privilegios disponibles:")
         for i, privilegio in enumerate(lista_privilegios, 1):
@@ -322,11 +334,13 @@ def asignar_privilegio_rol():
             print("Opción no válida. Por favor, ingrese el número correspondiente al privilegio.")
 
     cursor = connection.cursor()
-
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         for privilegio in privilegios:
             cursor.execute(f"GRANT {privilegio} TO {nombre_rol}")
+            imprimir_barra_progreso_lineal("Asignando privilegio...")
             print(f"El privilegio {privilegio} ha sido asignado al rol {nombre_rol} exitosamente.")
+            print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al asignar el privilegio al rol:", error.message)
@@ -336,6 +350,7 @@ def asignar_privilegio_rol():
 def revocar_privilegio_rol():
     nombre_rol = input("Ingrese el nombre del rol: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_rol}'")
         rows = cursor.fetchall()
@@ -349,7 +364,9 @@ def revocar_privilegio_rol():
             if 1 <= privilegio_seleccionado <= len(rows):
                 nombre_privilegio = rows[privilegio_seleccionado - 1][0]
                 cursor.execute(f"REVOKE {nombre_privilegio} FROM {nombre_rol}")
+                imprimir_barra_progreso_lineal("Eliminando privilegio...")
                 print(f"El privilegio {nombre_privilegio} ha sido revocado del rol {nombre_rol} exitosamente.")
+                print("\n")
             else:
                 print("La opción ingresada no es válida.")
         else:
@@ -357,11 +374,13 @@ def revocar_privilegio_rol():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al revocar el privilegio al rol:", error)
+    connection.commit()
     cursor.close()
 
 def visualizar_privilegios_rol():
     nombre_rol = input("Ingrese el nombre del rol: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT PRIVILEGE FROM DBA_SYS_PRIVS WHERE GRANTEE = '{nombre_rol}'")
         rows = cursor.fetchall()
@@ -374,9 +393,10 @@ def visualizar_privilegios_rol():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar los privilegios del rol:", error)
+    connection.commit()
     cursor.close()
 
-#FUNCIONES TABLAS --LISTO
+#FUNCIONES TABLAS --LISTO FALTA BARRA DE PROGRESO
 def crear_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
@@ -476,7 +496,9 @@ def crear_indice():
     cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"CREATE INDEX {nombre_indice} ON {nombre_tabla}({nombre_columna})")
+        imprimir_barra_progreso_lineal("Creando índice...")
         print(f"El índice {nombre_indice} ha sido creado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al crear el índice:", error.message)
@@ -489,7 +511,9 @@ def eliminar_indice():
     cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"DROP INDEX {nombre_indice}")
+        imprimir_barra_progreso_lineal("Eliminando índice...")
         print(f"El índice {nombre_indice} ha sido eliminado exitosamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar el índice:", error.message)
@@ -516,7 +540,9 @@ def plan_ejecucion():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"EXPLAIN PLAN FOR {consulta_sql}")
+        imprimir_barra_progreso_lineal("Generando plan de ejecución...")
         print("Plan de ejecución generado correctamente.")
+        print("\n")
        
     except cx_Oracle.DatabaseError as e:
         error, = e.args
@@ -553,9 +579,12 @@ def eliminar_planes_ejecucion():
 def recopilar_estadisticas_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"BEGIN DBMS_STATS.GATHER_TABLE_STATS(ownname => USER, tabname => '{nombre_tabla}'); END;")
+        imprimir_barra_progreso_lineal("Recopilando estadísticas...")
         print(f"Se han recopilado las estadísticas para la tabla {nombre_tabla} correctamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al recopilar estadísticas para la tabla:", error.message)
@@ -565,6 +594,7 @@ def recopilar_estadisticas_tabla():
 def ver_estadisticas_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT table_name, num_rows, last_analyzed FROM USER_TABLES WHERE TABLE_NAME = '{nombre_tabla}'")
         for row in cursor:
@@ -572,14 +602,18 @@ def ver_estadisticas_tabla():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al ver las estadísticas de la tabla:", error.message)
+    connection.commit()
     cursor.close()
 
 def eliminar_estadisticas_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"BEGIN DBMS_STATS.DELETE_TABLE_STATS(ownname => USER, tabname => '{nombre_tabla}'); END;")
+        imprimir_barra_progreso_lineal("Eliminando estadísticas...")
         print(f"Se han eliminado las estadísticas para la tabla {nombre_tabla} correctamente.")
+        print("\n")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al eliminar estadísticas para la tabla:", error.message)
@@ -589,6 +623,7 @@ def eliminar_estadisticas_tabla():
 #FUNCIONES PERFORMANCE BASE DE DATOS --FALTA TABULAR LOS RESULTADOS DE CONSULTAS
 def Vista_estadoBD():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM V$INSTANCE")
         for row in cursor:
@@ -596,21 +631,26 @@ def Vista_estadoBD():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar estado de la base de datos:", error.message)
+    connection.commit()
     cursor.close()
 
 def Parametros_Generales():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
-        for row in cursor:
-            print(row)
+        rows = [row for row in cursor]
+        headers = [desc[0] for desc in cursor.description]
+        print(tabulate(rows, headers=headers, tablefmt="jira"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
-        print("Error a la consulta de parametros generales:", error.message)
+        print("Error a la consulta de parametros generales:", error)
+    connection.commit()
     cursor.close()
 
 def Know_Version():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'compatible'")
         for row in cursor:
@@ -618,10 +658,12 @@ def Know_Version():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar version:", error.message)
+    connection.commit()
     cursor.close()
 
 def Name_Spfile():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"select value from v$system_parameter where name = 'spfile'")
         for row in cursor:
@@ -629,10 +671,12 @@ def Name_Spfile():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar ubicacion y nombre del spfile:", error.message)
+    connection.commit()
     cursor.close()
 
 def Name_ControlFiles():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'control_files'")
         for row in cursor:
@@ -640,10 +684,12 @@ def Name_ControlFiles():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar ubicacion y nombre de los ficheros de control:", error.message)
+    connection.commit()
     cursor.close()
 
 def Name_DB():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT VALUE FROM V$SYSTEM_PARAMETER WHERE NAME = 'db_name'")
         for row in cursor:
@@ -651,10 +697,12 @@ def Name_DB():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar nombre de la base de datos:", error.message)
+    connection.commit()
     cursor.close()
 
 def Actual_Cx():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT OSUSER, USERNAME, MACHINE, PROGRAM FROM V$SESSION ORDER BY OSUSER")
         for row in cursor:
@@ -662,10 +710,12 @@ def Actual_Cx():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar las conexiones actuales:", error.message)
+    connection.commit()
     cursor.close()
 
 def Objects():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT OWNER, COUNT(OWNER) Numero FROM DBA_OBJECTS GROUP BY OWNER")
         for row in cursor:
@@ -673,10 +723,12 @@ def Objects():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los propietarios por objetos y numero de objetos:", error.message)
+    connection.commit()
     cursor.close()
 
 def Tables_ActualUser():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM USER_TABLES")
         for row in cursor:
@@ -684,10 +736,12 @@ def Tables_ActualUser():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar las tablas del usuario actual:", error.message)
+    connection.commit()
     cursor.close()
 
 def User_Products():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT * FROM USER_CATALOG")
         for row in cursor:
@@ -695,10 +749,12 @@ def User_Products():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los productos del usuario:", error.message)
+    connection.commit()
     cursor.close()
 
 def Usser_Cx():
     cursor = connection.cursor()
+    cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute(f"SELECT USERNAME USUARIO_ORACLE, COUNT(USERNAME) NUMERO_SESIONES FROM V$SESSION GROUP BY USERNAME ORDER BY NUMERO_SESIONES DESC")
         for row in cursor:
@@ -706,6 +762,7 @@ def Usser_Cx():
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar los usuarios conectados:", error.message)
+    connection.commit()
     cursor.close()
 
 #FUNCIONES AUDITORIA --FALTA
@@ -785,53 +842,46 @@ def recuperar_respaldo_esquema():
     connection.commit()
     cursor.close()
 
+import subprocess
+
 def respaldo_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"expdp system/root@localhost:1521/XE tables={nombre_tabla} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        subprocess.run([f"expdp system/root@localhost:1521/XE tables='{nombre_tabla}' directory='{nombre_directorio}' dumpfile='{nombre_respaldo}.dmp' logfile='{nombre_respaldo}.log'"], shell=True, check=True)
         print(f"El respaldo {nombre_respaldo} ha sido creado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al crear el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
+    except subprocess.CalledProcessError as e:
+        print("Error al crear el respaldo:", e)
 
 def recuperar_respaldo_tabla():
     nombre_tabla = input("Ingrese el nombre de la tabla: ")
     nombre_respaldo = input("Ingrese el nombre del respaldo: ")
     nombre_directorio = input("Ingrese el nombre del directorio: ")
-    cursor = connection.cursor()
-    cursor.execute ("alter session set\"_ORACLE_SCRIPT\" = true")
     try:
-        cursor.execute(f"impdp system/root@localhost:1521/XE tables={nombre_tabla} directory={nombre_directorio} dumpfile={nombre_respaldo}.dmp logfile={nombre_respaldo}.log")
+        subprocess.run([f"impdp system/root@localhost:1521/XE tables='{nombre_tabla}' directory='{nombre_directorio}' dumpfile='{nombre_respaldo}.dmp' logfile='{nombre_respaldo}.log'"], shell=True, check=True)
         print(f"El respaldo {nombre_respaldo} ha sido recuperado exitosamente.")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Error al recuperar el respaldo:", error.message)
-    connection.commit()
-    cursor.close()
+    except subprocess.CalledProcessError as e:
+        print("Error al recuperar el respaldo:", e)
+
 
 
 
 
 #MENUS
 def mostrar_menu_principal():
-    print("1) ADMINISTRACION DE TABLESPACES Y SEGURIDAD\n")
-    print("2) TUNNING DE CONSULTAS\n")
-    print("3) PERFORMANCE DE LA BASE DE DATOS\n")
-    print("4) AUDITORIA DE LA BD\n")
-    print("5) ADMINISTRACIÓN DE ARCHIVOS DE RESPALDOS Y DIRECTORIOS\n")
-    print("0) SALIR\n")
+    print("1) Administración de tablespaces y seguridad\n")
+    print("2) Tunning de consultas\n")
+    print("3) Performance de la base de datos\n")
+    print("4) Auditoría de la base de datos\n")
+    print("5) Administración de archivos de respaldos y directorios\n")
+    print("0) Salir\n")
 
 def mostrar_menu_administracion_tablespaces():
-    print("1) TABLESPACES\n")
-    print("2) USUARIOS\n")
-    print("3) ROLES\n")
-    print("4) TABLAS\n")
+    print("1) Tablespaces\n")
+    print("2) Usuarios\n")
+    print("3) Roles\n")
+    print("4) Tablas\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_tablespaces():
@@ -869,9 +919,9 @@ def mostrar_menu_tablas():
     print("0) Volver\n")
 
 def mostrar_menu_tunning_consultas():
-    print("1) INDICES\n")
-    print("2) PLAN DE EJECUCIÓN\n")
-    print("3) ESTADÍSTICAS\n")
+    print("1) Índices\n")
+    print("2) Plan de ejecución\n")
+    print("3) Estadísticas\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_indices():
@@ -887,39 +937,39 @@ def mostrar_menu_ejecucion():
     print("0) Volver\n")
 
 def mostrar_menu_estadisticas():
-    print("1) Recopilar estadisticas de una tabla\n")
-    print("2) Ver estadisticas\n")
-    print("3) Eliminar estadisticas\n")
+    print("1) Recopilar estadísticas de una tabla\n")
+    print("2) Ver estadísticas\n")
+    print("3) Eliminar estadísticas\n")
     print("0) Volver\n")
 
 def mostrar_menu_performance_bd():
-    print("1) Vista que muestra el estado de la base de datos\n")
-    print("2) Consulta de parámetros generales\n")
-    print("3) Consulta para conocer la versión\n")
-    print("4) Consulta ubicación y nombre de SPFILE\n")
-    print("5) Consulta ubicación y número de ficheros de control\n")
-    print("6) Consulta el nombre de la base de datos\n")
-    print("7) Consulta de las conexiones actuales\n")
-    print("8) Consulta de usuarios conectados y número de sesiones\n")
+    print("1) Estado de la base de datos\n")
+    print("2) Parámetros generales\n")
+    print("3) Versión\n")
+    print("4) Ubicación y nombre de SPFILE\n")
+    print("5) Ubicación y número de ficheros de control\n")
+    print("6) Nombre de la base de datos\n")
+    print("7) Conexiones actuales\n")
+    print("8) Usuarios conectados y número de sesiones\n")
     print("9) Propietarios por objetos y número de objetos\n")
-    print("10) Consulta las tablas propiedad del usuario actual\n")
-    print("11) Consulta todos los productos del usuario\n")
+    print("10) Tablas sobre propiedad del usuario actual\n")
+    print("11) Todos los productos del usuario\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_auditoria():
-    print("1) ACTIVAR AUDITORIA\n")
-    print("2) VISUALIZAR LAS TABLAS DE AUDITORÍA\n")
-    print("3) ACTIVAR LA AUDITORIA SOBRE LA MODIFICACIÓN DE TABLAS DEL USUARIO\n")
+    print("1) Activar auditorí\n")
+    print("2) Visualizarlas tablas de auditoría\n")
+    print("3) Activar la auditoría sobre la modificación de tablas del usuario\n")
     print("0) Volver al menú principal\n")
 
 def mostrar_menu_respaldos():
-    print("1) CREAR DIRECTORIO\n")
-    print("2) CREAR RESPALDO FULL\n")
-    print("3) RECUPERAR RESPALDO FULL\n")
-    print("4) CREAR RESPALDO DE UN ESQUEMA\n")
-    print("5) RECUPERAR RESPALDO DE UN ESQUEMA\n")
-    print("6) CREAR RESPALDO DE UNA TABLA\n")
-    print("7) RECUPERAR RESPALDO DE UNA TABLA\n")
+    print("1) Crear directorio\n")
+    print("2) Crear respaldo full\n")
+    print("3) Recuperar respaldos full\n")
+    print("4) Crear respaldos de un esquema\n")
+    print("5) Recuperar respaldo de un esquema\n")
+    print("6) Crear respaldo de una tabla\n")
+    print("7) Recuperar respaldo de una tabla\n")
     print("0) Volver al menú principal\n")
     
 
