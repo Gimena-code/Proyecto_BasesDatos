@@ -158,37 +158,37 @@ def borrar_usuario():
     cursor.close()
 
 def asignar_privilegio_usuario():
-    nombre_usuario = input("Ingrese el nombre del usuario: ")
+    nombre_usuario = input("Ingrese el nombre del usuario: ").strip().upper()
 
-    lista_privilegios = [
-        "CREATE SESSION",
-        "SELECT ANY TABLE",
-        "INSERT ANY TABLE",
-        "UPDATE ANY TABLE",
-        "DELETE ANY TABLE",
-        "ALTER ANY TABLE",
-        "DROP ANY TABLE",
-        "CREATE ANY TABLE",
-        "CREATE ANY INDEX",
-        "CREATE ANY VIEW",
-        "CREATE ANY PROCEDURE",
-        "DROP USER",
-        "GRANT ANY PRIVILEGE"
-        # Agrega aquí más privilegios según sea necesario
-    ]
+    privilegios = {
+        "1": "CREATE SESSION",
+        "2": "SELECT ANY TABLE",
+        "3": "INSERT ANY TABLE",
+        "4": "UPDATE ANY TABLE",
+        "5": "DELETE ANY TABLE",
+        "6": "ALTER ANY TABLE",
+        "7": "DROP ANY TABLE",
+        "8": "CREATE ANY TABLE",
+        "9": "CREATE ANY INDEX",
+        "10": "CREATE ANY VIEW",
+        "11": "CREATE ANY PROCEDURE",
+        "12": "DROP USER",
+        "13": "GRANT ANY PRIVILEGE"
+    }
 
-    privilegios = []
+    seleccionados = []
 
     while True:
         print("Lista de privilegios disponibles:")
-        for i, privilegio in enumerate(lista_privilegios, 1):
+        for i, privilegio in privilegios.items():
             print(f"{i}. {privilegio}")
 
         opcion_privilegio = input("Ingrese el número correspondiente al privilegio que desea asignar o presione Enter para salir: ")
 
-        if opcion_privilegio.isdigit() and 1 <= int(opcion_privilegio) <= len(lista_privilegios):
-            privilegio_elegido = lista_privilegios[int(opcion_privilegio) - 1]
-            privilegios.append(privilegio_elegido)
+        if opcion_privilegio in privilegios:
+            privilegio_elegido = privilegios[opcion_privilegio]
+            seleccionados.append(privilegio_elegido)
+            print(f"Privilegio '{privilegio_elegido}' agregado a la lista.")
 
             respuesta = input("¿Desea agregar otro privilegio? (S/N): ")
             if respuesta.upper() != "S":
@@ -436,8 +436,25 @@ def monitorear_indices():
     try:
         cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
         cursor.execute("SELECT index_name FROM user_indexes")
+        cantidad = input("¿Cuantos indices quiere ver?(1887): ")
+        try:
+            cantidad = int(cantidad)  # Convertir a entero
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+            return  # Salir de la función si la conversión falla
+
+        print("│           Nombre del Índice        │")
+        contador = 0
+        
+        # Iterar sobre los resultados y mostrarlos
         for row in cursor:
-            print(row)
+            if contador < cantidad:  # Limitar a los primeros 10 índices
+                print(f"│    {row[0]:<25}       │")  # Formatear el nombre del índice
+                contador += 1
+            else:
+                break  # Salir del bucle después de 10 índices
+
+        print("╘═══════════════════════════════════╛")
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al monitorear los índices:", error)
@@ -454,7 +471,6 @@ def plan_ejecucion():
         imprimir_barra_progreso_lineal("Generando plan de ejecución...")
         print("Plan de ejecución generado correctamente.")
         print("\n")
-       
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al generar el plan de ejecución:", error)
@@ -466,8 +482,13 @@ def visualizar_plan_ejecucion():
     cursor.execute("alter session set \"_ORACLE_SCRIPT\" = true")
     try:
         cursor.execute("SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)")
+        
+        print("\nPlan de ejecución:")
+        print("----------------------------------------------------------------------------------")
         for row in cursor:
-            print(row)
+            print(row[0])
+        print("----------------------------------------------------------------------------------")
+
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al visualizar los planes de ejecución:", error.message)
@@ -539,7 +560,7 @@ def Vista_estadoBD():
         cursor.execute(f"SELECT * FROM V$INSTANCE")
         rows = [row for row in cursor]
         headers = [desc[0] for desc in cursor.description]
-        print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error al mostrar estado de la base de datos:", error.message)
@@ -552,7 +573,7 @@ def Parametros_Generales():
         cursor.execute(f"SELECT * FROM V$SYSTEM_PARAMETER")
         headers = ["Numero", "Nombre", "Tipo", "Valor"]
         data = [[row[0], row[1],row[2],row[3]] for row in cursor]
-        print(tabulate(data, headers, tablefmt="fancy_grid"))
+        print(tabulate(data, headers, tablefmt="grid"))
     except cx_Oracle.DatabaseError as e:
         error, = e.args
         print("Error a la consulta de parametros generales:", error.message)
